@@ -1,0 +1,296 @@
+/*
+    WebGL 8x8 board games
+    Copyright (C) 2011 by Jordi Mariné Fort
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+* {
+  margin: 0;
+  padding: 0;
+  color: #402b2a; 
+  font-size: medium;
+  font-family: "Comic Sans MS", Arial, sans-serif;
+}
+
+body {
+  overflow:hidden;
+}
+
+#root {
+  background-color: #0A7736;
+}
+
+#game_info {
+  display: none;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: auto;
+  padding: 0px 5px 0px 5px; 
+  background-color: #f7e3a4;
+  border: 1px solid #402b2a;
+  border-bottom-right-radius: 10px; -webkit-border-bottom-right-radius: 10px; -khtml-border-bottom-right-radius: 10px;
+  user-select: none; -webkit-user-select: none; -moz-user-select: none;
+}
+
+
+#board {
+  float: left;
+  left: 0;
+  overflow: auto;
+  right: 0;
+}
+
+
+#controls {
+  position: absolute; 
+  height: 100%; 
+  right: 0;
+  z-index: 2; 
+  border: none;
+  user-select: none; -webkit-user-select: none; -moz-user-select: none;
+}
+
+
+#help {
+  text-decoration: none
+}
+
+#config {
+  position: float;
+  float: right;
+  height: 100%;
+  display: none;
+  background-color: #f7e3a4; 
+  border-left: 3px solid #402b2a; 
+  overflow-y: scroll;
+  height: 100%;
+  user-select: none; -webkit-user-select: none; -moz-user-select: none;
+}
+
+#options, #games, #title {
+  display: none;
+  margin: 10px 20px 10px 20px;
+}
+
+#players {
+  margin-top: 0px;
+}
+
+#ai {
+  margin-top: 20px;
+  display: none;
+}
+
+#network {
+  margin-top: 20px;
+}
+
+#messageBox {
+  z-index: 3;
+  position: absolute; 
+  bottom: 8px; 
+  left: 50%; 
+  margin-left: -14.5em; 
+  width: 27em; 
+  height: 80px; 
+  background-color: #f7e3a4; 
+  padding: 10px; 
+  text-align: center;
+  border: 3px solid #402b2a; 
+  border-radius: 10px; -webkit-border-radius: 10px; -khtml-border-radius: 10px;
+  -webkit-user-select: none; -moz-user-select: none; user-select: none; 
+}
+
+
+select.list {
+  width: 250px;
+}
+
+#options {
+  float: left;
+}
+
+
+
+#connect_section, #profile_section, #btnDisconnect, #btnResignGame, #btnDrawGame, #btnShowMatchingOptions, #btnHideMatchingOptions, #btnCreateGame, #btnDeleteFinishedGames, #matching_options {
+  display: none;
+}
+
+A.author {
+   font-weight: bold;
+   text-decoration: none;
+}
+
+#message {
+   font-size: 1.2em;
+   font-weight: bold;
+}
+
+H4 {
+   font-size: 1em;
+   text-decoration: underline;
+   clear:both;
+   float:left;
+   margin-top: 4px;
+   margin-bottom: 3px;
+}
+
+dt {
+   clear:both;
+   float:left;
+   width: 6em;
+   white-space: nowrap;
+   height: 1.6em;
+   text-align:left;
+   margin: 0 0.3em 0.25em 0;
+   padding-top: 0.5em;
+}
+
+dd {
+   float:left;
+}
+
+dd p {
+   display: inline;
+   padding-top: 0.5em;
+   vertical-align: middle;
+}
+
+
+input {
+   clear:both;
+   float:left;
+}
+
+
+/*********************/
+
+button {
+  float: left;
+}
+
+button, select, input, textarea {
+  padding: 2px 4px 2px 4px;
+  border: 1px #402b2a solid; 
+  border-radius: 6px;
+  margin-top: 5px;
+  margin-bottom: 2px;
+  margin-right: 4px;
+  background-color: #dac394;
+  color: #402b2a;
+}
+
+option {
+  background-color: #dac394;
+  color: #402b2a;
+}
+
+button::-moz-focus-inner { 
+  border: 0;
+  padding: 0;
+}
+
+button:active {
+  background-color: #402b2a;
+  color: #dac394;
+}
+
+button:disabled, input:disabled {
+  background: #f7e3a4;
+  color: #777777;
+}
+
+#btnGame, #btnOptions, #btnAbout, #btnClose {
+  clear: both;   
+  background-color: #f7e3a4; 
+  border: 3px solid #402b2a;
+}
+
+.ui-buttonset { 
+  clear: both;
+  alignment-baseline: central;
+}
+
+.ui-corner-all { border-radius: 4px; }
+.ui-menu { list-style:none; padding: 2px; margin: 0px; outline: none; display: block; background-color: #dac394; width: 98% }
+.ui-menu .ui-menu-item { margin: 0px; padding: 0px; zoom: 1; }
+.ui-menu .ui-menu-item a { text-decoration: none; display: block; padding: 2px 1px; line-height: 1.5; zoom: 1;  }
+.ui-menu .ui-menu-item a.ui-state-focus,
+.ui-menu .ui-menu-item a.ui-state-active { background: CornflowerBlue; }
+
+option:active {
+  background-color: #dac394;
+}
+
+#openid_providers_menu {
+    border: 1px #6c3000 solid;
+    border-radius: 6px; 
+    margin-top: 2px;
+}
+
+#connect {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+#oic_connect {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    margin-left: -8px;
+    padding-left: 0px;
+    padding-right: 0px;
+    background-image: url(resources/images/oic.png) ;
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 16px,16px;
+    width: 20px;
+    height: 24.1px;
+}
+
+.ai_thinkingtime_option {
+    display: none
+}
+
+.scrollTable {
+  clear: both; float: 
+  left; border: 1px #6c3000 solid; 
+  border-top-left-radius: 6px; 
+  border-top-right-radius: 6px;
+}
+
+.scrollTable > thead {
+  clear:both;
+  background: #dac394;
+  border: 1px #6c3000 solid; border-top-left-radius: 6px; border-top-right-radius: 6px;
+}
+
+.scrollTable > thead > tr > th {
+  border-bottom: 1px #6c3000 solid; 
+  text-align: left;
+  text-weight: bold;
+  padding-right: 0.5em;
+}
+
+.scrollTable > tbody {
+  clear:both;
+  border: 1px #6c3000 solid;
+}
+
+.scrollTable > tbody > tr > td {
+  border-bottom: 1px #6c3000 solid; 
+  padding-right: 0.5em;
+}
+

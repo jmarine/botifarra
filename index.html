@@ -1,0 +1,818 @@
+<!--
+    WebGL 8x8 board games
+    Copyright (C) 2011-2021 by Jordi Mariné Fort
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<HTML>
+<HEAD>
+<META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"> 
+<title data-l10n-id="app.title">Botifarra game</title> 
+
+<meta name="viewport" content="initial-scale=0.650, maximum-scale=1.0, user-scalable=no">
+<meta name="author" content="Jordi Mariné Fort <jmarine@tinet.org>">
+<meta name="description" content="Sushi Go!">
+
+<link rel="stylesheet" type="text/css" href="styles.css" />
+<link rel="stylesheet" type="text/css" href="libs/jquery-ui.structure.css" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="resources/images/logo16.png" type="image/png" />
+
+
+
+<script type="text/javascript" src="libs/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="libs/jquery-ui-1.12.1.js"></script>
+<script type="text/javascript" src="libs/wgs/md5.js"></script>
+<script type="text/javascript" src="libs/wgs/hmac-sha256.js"></script>
+<script type="text/javascript" src="libs/wgs/pbkdf2.js"></script>
+<script type="text/javascript" src="libs/wgs/enc-base64-min.js"></script>
+<script type="text/javascript" src="libs/wgs/wamp2.js"></script>
+<script type="text/javascript" src="libs/wgs/wgs-client-3.0.js"></script>
+
+<script type="text/javascript" src='app.js'></script>
+<script type="text/javascript" src='ui.js'></script>
+<SCRIPT type="text/javascript" src="game.js"></SCRIPT>  
+<SCRIPT type="text/javascript" src="botifarra.js"></SCRIPT>  
+<SCRIPT type="text/javascript" src="players.js"></SCRIPT>
+<script type="text/javascript" src='board.js'></script>
+<script type="text/javascript" src='storage.js'></script>
+<script type="text/javascript" src='network.js'></script>
+
+
+<script type="text/javascript">
+var gaEnabled = false;
+
+function testJs() {
+	alert("test");
+}
+
+function enableGoogleAnalytics() {
+/*
+ if(!gaEnabled) {
+  gaEnabled = true;
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-21265464-1', 'auto');
+  ga('send', 'pageview');
+ }
+*/
+}
+</script>
+
+
+ 
+<SCRIPT type="text/javascript"> 
+/*** WGS ***/
+var menu = null;
+var notificationChannel = null;
+
+var gid = null;
+var provider = null;
+var providerAuthUrl = null;
+var oauth2Code = null;
+var oauth2Provider = null;
+var oauth2RedirectUri = null;
+
+
+function authentication(state, msg) {
+    console.log("authentication state: " + state);
+
+    if(state == ConnectionState.ERROR) {
+        if(app.lobby) app.lobby.disconnect();
+        document.l10n.formatValue(msg).then(function(err) { alert(err) });
+        
+    } else if(state == ConnectionState.CONNECTED) {
+        $("#server_url").attr("disabled", "disabled");
+
+    } else if(state == ConnectionState.CHALLENGED) {        
+        console.log("Challenge: " + JSON.stringify(msg));
+        if(msg._oauth2_provider_url && oauth2Code != null) {
+            var authUrl = msg._oauth2_provider_url + "&state=" + escape(notificationChannel);
+            if(oauth2Code != null) providerAuthUrl = authUrl;
+            //else window.open(authUrl, '_blank');
+            
+        } else if(msg._oauth2_providers) {  
+            // OAuth 2.0 / OpenID Connect selector
+            var providers = $("#openid_providers_menu");
+            //providers.find("li:gt(0)")
+            providers.find("li").each(function(){
+                $(this).remove();
+            });
+           
+            var selected = false; 
+            if(msg._oauth2_providers.length == 0) {
+                var li = $("<li>");
+                li.attr("class", "ui-menu-item").append("Unknown OpenID Connect providers");
+                providers.append(li);
+            } else msg._oauth2_providers.forEach(function(item) {
+              if(provider.length == 0 || provider == item.name) {
+                var link = $("<a>");
+                link.text(item.name);
+                link.attr("class", "ui-corner-all")
+                if(item.url) link.attr("onclick", "javascript:window.open('" + item.url + "&state=" + escape(notificationChannel) + "','_blank')");
+                // else link.attr("onclick", "javascript:wgsclient.openIdConnectFromSubject('"+realm+"','"+item.registrationEndpoint+"', get_openid_connect_callback_url(), notificationChannel, authentication);");
+
+                var li = $("<li>");
+                li.attr("class", "ui-menu-item").append(link)
+                providers.append(li);
+
+                if(provider == item.name) {
+                   if(providerAuthUrl == null) {
+			providerAuthUrl = item.url + "&state=" + escape(notificationChannel);
+			//if(oauth2Code == null) window.open(providerAuthUrl,'_blank');  // it may be blocked by anti-popup software
+                   }
+		}
+              } 
+
+            });
+
+      
+            if(providerAuthUrl == null) { 
+                menu = $( "#oic_connect" ).next().next().show().position({
+                            my: "left top",
+                            at: "left bottom",
+                            offset: "0 2",
+                            of: "#btnConnect"
+                        });
+                $( document ).one( "click", function() {
+                    menu.hide();
+                    //wgsclient.close();
+                    //wgsclient = null;
+                });
+
+            }          
+        }
+
+        if(providerAuthUrl != null && oauth2Code != null) {
+            var url = $("#server_url").val();
+            var wgsclient = app.lobby.getWgsClient(url);
+            var realm = wgsclient.getDefaultRealm();
+            wgsclient.openIdConnectAuthCode(realm, oauth2Provider, getOAuth2ClientName(), oauth2RedirectUri, oauth2Code, notificationChannel, authentication);
+            oauth2Code = null;
+        }
+
+        
+    } else if(state == ConnectionState.AUTHENTICATED) {
+
+        if(menu) menu.hide();
+        $("#btnRegister").attr("disabled", "disabled");
+        $("#oic_connect").attr("disabled", "disabled");
+
+        $("#user").attr("disabled", "disabled");
+        $("#password").attr("disabled", "disabled");
+           
+        if(msg.name) $("#user").val(msg.name);
+        $("#lbl_password").hide();
+        $("#password").hide();
+
+        $("#btnConnect").hide();
+        $("#oic_connect").hide();
+        $("#btnRegister").hide();
+
+        $("#user_picture").attr("src", "/images/anonymous.png");
+        if(msg.picture) $("#user_picture").attr("src", msg.picture);
+        $("#btnProfile").show();
+
+        app.lobby.onConnect(msg); 
+
+    } else if(state == ConnectionState.DISCONNECTED  || state == ConnectionState.CLOSED) {
+        if(app.lobby) app.lobby.disconnect();
+    }
+        
+}
+
+var oauth2ClientName = "WebGL 8x8 board games";
+function getOAuth2ClientName()
+{
+    return oauth2ClientName;
+}
+
+function openid_connect(redirectUri) {
+    if(!redirectUri) {
+        var redirectUri = get_openid_connect_callback_url();
+        var user = $("#user").val();
+        if(user.length == 0) {
+	    document.l10n.formatValue("app.network.user_empty_error").then(function(msg) { alert(msg) });
+        } else {
+            var url = $("#server_url").val();
+            var wgsclient = app.lobby.getWgsClient(url);
+            var realm = wgsclient.getDefaultRealm();
+            wgsclient.openIdConnectFromSubject(realm, user, getOAuth2ClientName(), redirectUri, notificationChannel, authentication);
+        }
+        
+    } else {
+        oauth2Code = get_url_param(redirectUri, "code");
+        if(oauth2Code != null) {
+            document.l10n.formatValue('app.network.connecting').then(function(msg) { app.view.UI.showMessage(msg) } );
+
+            oauth2Provider = get_url_param(redirectUri, "provider");
+            oauth2RedirectUri = clear_openid_connect_params(redirectUri, false);
+            
+            var url = $("#server_url").val();
+            var wgsclient = app.lobby.getWgsClient(url);
+            if(wgsclient.getState() != ConnectionState.CHALLENGED) {
+               openid_connect_menu(null);
+            } else {
+               var realm = wgsclient.getDefaultRealm();
+               wgsclient.openIdConnectAuthCode(realm, oauth2Provider, getOAuth2ClientName(), oauth2RedirectUri, oauth2Code, notificationChannel, authentication);
+               oauth2Code = null;
+            }
+        } else {
+            var error = get_url_param(redirectUri, "error");
+            if(app.lobby) {
+              var wgsclient = app.lobby.getWgsClient(null);
+              if(wgsclient) wgsclient.goodbye(error);
+            }
+        }
+    }
+}
+
+function get_url_param(url, param) {
+    var value = null;
+    var pos = url.indexOf("&"+param+"=");
+    if(pos == -1) pos = url.indexOf("?"+param+"=");
+    if(pos != -1) {
+        value = url.substring(pos+param.length+2);
+        pos = value.indexOf("&");
+        if(pos != -1) value = value.substring(0, pos);
+    }
+    return value;
+}
+
+
+function get_openid_connect_callback_url() {
+    var url = document.location.href;
+    url = url.substring(0, url.lastIndexOf("/")) + "/oauth2callback.html";
+    return url;
+}
+
+
+function clear_openid_connect_params(url,clearProvider) {
+    // Clear OpenId Connect's parameters
+    var oicParams = ["code","state","error","error_description","authuser","prompt","session_state","num_sessions"];
+    if(clearProvider) oicParams = ["provider", "code","state","error","error_description","authuser","prompt","session_state","gcmChannelId","num_sessions"];
+    oicParams.forEach(function(param) {
+        var paramPos = url.indexOf("&"+param+"=");
+        if(paramPos == -1) paramPos = url.indexOf("?"+param+"=");
+        if(paramPos != -1) {
+            var paramEnd = url.indexOf("&", paramPos+1);
+            var otherParams = (paramEnd != -1)? url.substring(paramEnd+1) : "";
+            var offset = (otherParams.length==0)? 0 : 1;
+            url = url.substring(0, paramPos+offset) + otherParams;
+        }
+    });
+
+    return url;
+}
+
+
+function openid_connect_menu(self) {
+    var url = $("#server_url").val();
+    var redirectUri = get_openid_connect_callback_url();
+    
+    var user = $("#user").val();
+    var wgsclient = app.lobby.getWgsClient(url);
+    var realm = wgsclient.getDefaultRealm();
+    wgsclient.openIdConnectProviders(user, realm, getOAuth2ClientName(), redirectUri, authentication);
+}
+
+function updateNotificationChannel(subscription) {
+  notificationChannel = (subscription != null) ? JSON.stringify(subscription) : null;
+  if(app.lobby) {
+	var wgsclient = app.lobby.getWgsClient(null);
+	if(wgsclient != null) wgsclient.setUserPushChannel(getOAuth2ClientName(), notificationChannel);
+  }
+}
+
+function initPushNotifications() {  
+  // Are Notifications supported in the service worker?  
+  console.log('initPushNotifications');  
+
+/*
+  if (window.Notification && Notification.permission !== "granted") {
+    Notification.requestPermission(function (status) {
+      if (Notification.permission !== status) {
+        Notification.permission = status;
+      }
+    });
+  }
+*/
+
+  if (!('showNotification' in ServiceWorkerRegistration.prototype)) {  
+    console.warn('Notifications aren\'t supported.');  
+    //return;  
+  }
+
+  // Check the current Notification permission.  
+  // If its denied, it's a permanent block until the  
+  // user changes the permission  
+  if (Notification.permission === 'denied') {  
+    console.warn('The user has blocked notifications.');  
+    return;  
+  }
+
+  // Check if push messaging is supported  
+  if (!('PushManager' in window)) {  
+    console.warn('PushManager isn\'t supported.');  
+    return;  
+  }
+
+  // We need the service worker registration to check for a subscription  
+  navigator.serviceWorker.ready.then(function(serviceWorkerRegistration) {  
+    // Do we already have a push message subscription?  
+    serviceWorkerRegistration.pushManager.getSubscription()  
+      .then(function(subscription) {  
+        $("#push_notifications").show();
+
+        if (!subscription) {  
+          return;  
+        }
+        
+        updateNotificationChannel(subscription);
+        console.log("NOTIFICATION1:" + JSON.stringify(subscription));
+        //sendSubscriptionToServer(subscription);
+
+        $("#allow_push_notifications").prop('checked', true);
+      })  
+      .catch(function(err) {  
+        console.warn('Error during getSubscription()', err);  
+      });  
+  });  
+}
+
+function subscribe() {  
+  navigator.serviceWorker.ready.then(function(serviceWorkerRegistration) {  
+    serviceWorkerRegistration.pushManager.subscribe({userVisibleOnly: true})  
+      .then(function(subscription) {  
+        // The subscription was successful  
+        updateNotificationChannel(subscription);
+        console.log("NOTIFICATION2: " + JSON.stringify(subscription));
+      })  
+      .catch(function(e) {  
+        $("#allow_push_notifications").prop('checked', false);  
+        if (Notification.permission === 'denied') {  
+          console.warn('Permission for Notifications was denied');  
+        } else {  
+          console.error('Unable to subscribe to push.', e);  
+        }  
+      });  
+  });  
+}
+
+
+function unsubscribe() {  
+  updateNotificationChannel(null);
+  navigator.serviceWorker.ready.then(function(serviceWorkerRegistration) {  
+    // To unsubscribe from push messaging, you need get the  
+    // subscription object, which you can call unsubscribe() on.  
+    serviceWorkerRegistration.pushManager.getSubscription().then(  
+      function(subscription) {  
+        // Check we have a subscription to unsubscribe  
+        if (!subscription) {  
+          return;  
+        }  
+          
+        // We have a subscription, so call unsubscribe on it  
+        subscription.unsubscribe().then(function(successful) {  
+          console.log("PushAPI unsubscribed.");
+        }).catch(function(e) {  
+          console.log('PushAPI unsubscription error: ', e);  
+        });  
+      }).catch(function(e) {  
+        console.error('Error thrown while unsubscribing from push messaging.', e);  
+      });  
+  });  
+}
+
+function initApp() {
+  app.view.board.init(); 
+  //app.view.UI.createGame(); 
+  //app.controller.Storage.listGames(); 
+
+  gid = (document.location.href.indexOf("gid=") != -1) ? document.location.href.substring(document.location.href.indexOf("gid=")+4) : "";
+  if(gid.indexOf("&") != -1) gid = gid.substring(0, gid.indexOf("&"));
+
+  provider = (document.location.href.indexOf("provider=") != -1) ? document.location.href.substring(document.location.href.indexOf("provider=")+9) : "";
+  if(provider.indexOf("&") != -1) provider = provider.substring(0, provider.indexOf("&"));
+
+  if(provider.length > 0) {
+      $('#lbl_password').hide();
+      $('#password').hide();
+      $('#user').attr('disabled','disabled');
+
+      app.view.UI.showGames();
+      $('#player2').val(2);
+
+      $('#btnRetractMove').hide();
+      $('button.btnStartGame').hide();
+      $('#connect_section').show();
+      $('#network').fadeIn();
+
+      oauth2Code = get_url_param(document.location.href, "code");
+      if(oauth2Code != null) {
+          oauth2Provider = provider;
+          oauth2RedirectUri = document.location.href;
+          var pos = oauth2RedirectUri.indexOf("code=");
+          if(pos != -1) oauth2RedirectUri = oauth2RedirectUri.substring(0, pos-1);
+
+          document.l10n.formatValue('app.network.connecting').then(function(msg) { app.view.UI.showMessage(msg) } );
+
+          if(provider=="facebook.com") {
+              oauth2ClientName = "WebGL 8x8 board games on Facebook";
+              oauth2RedirectUri = "https://apps.facebook.com/webglchessboardgames/app.html?provider=facebook.com";
+          }
+      }
+
+      openid_connect_menu(null);
+  }
+
+
+
+  $("#allow_push_notifications").change(function() {  
+    var enabled = $(this).prop('checked');
+    if(notificationChannel != null) {  
+      unsubscribe();  
+    } else {  
+      subscribe();  
+    }  
+  });
+
+  if('serviceWorker' in navigator) {  
+    navigator.serviceWorker.register('service-worker.js').then(initPushNotifications);  
+  } else {  
+    console.warn('Service workers aren\'t supported in this browser.');  
+  } 
+
+}
+
+</SCRIPT> 
+ 
+<meta name="defaultLanguage" content="en">
+<meta name="availableLanguages" content="ca, es, en, fr">
+<link rel="localization" href="resources/locales/app_{locale}.json">
+<script defer src="libs/l20n.js"></script>
+
+<script language="javascript">
+function preloadSounds() {
+  //var audio = document.getElementById('move');
+  //if(audio) audio.load();
+  //audio = document.getElementById('select');
+  //if(audio) audio.load();
+}
+
+function playSound(id) {
+   if($('#sounds')[0].checked) {
+     var audio = document.getElementById(id);
+     if(audio) {
+       audio.load();
+       audio.play();
+     }
+   }
+}
+</script>
+
+
+ 
+</HEAD>
+<BODY onload="document.l10n.ready.then(initApp);">
+<FORM id="controls" onsubmit="return false;">
+
+  <DIV id="config">
+    <DIV id="title">
+      <table height="92%" cellpadding="0" cellspacing="0">
+      <tr valign="top" height="10px">
+      <td align="left">
+      <H4 style="white-space: nowrap; float:none"><a href="javascript:app.view.UI.hideControls()" data-l10n-id="app.title">Botifarra game</a></H4>
+      <a class="author" href="mailto:jmarine@tinet.org" data-l10n-id="app.copyright">
+Copyright &copy; 2011-2021<br>
+by Jordi Marin&eacute; Fort</a>
+<br><br>
+
+<p style="white-space: nowrap;" data-l10n-id="app.license">
+The <a href="https://github.com/jmarine/botifarra" target="_blank">source code</a> of this game<br>is licensed under <a href="http://www.gnu.org/licenses/gpl.html" target="_blank">GNU GPL v3</a><br>and uses the following libraries:</p>
+
+      <ul style="margin: 0.25em 0 0 1.5em;">
+           <li><a href="http://jquery.com" target="_blank">jQuery v1.12.4</a></li>
+	   <li><a href="http://l20n.org" target="_blank">L20n v3.5.1</a></li>
+           <li><a href="https://github.com/jmarine/wgs" target="_blank">WGS v3</a></li>
+           <li><a href="http://code.google.com/p/crypto-js" target="_blank">CryptoJS v3.1.2</a></li>
+         </ul>
+      <br>
+
+    </td>
+     <td align="right">
+<a href="#" style="text-decoration: none" onclick="javascript:app.view.UI.hideControls(); return false"><img src="resources/images/close.png" border="0" width="20" height="20" data-l10n-id="app.actions.close"/></a>
+
+     </td>
+     </tr>
+     </table>
+
+   </DIV>
+
+   <div id="options">
+      <DIV id="ui">
+      <H4><a href="javascript:app.view.UI.hideControls()" data-l10n-id="app.options.ui_title">UI configuration</a></H4>
+      <a href="#" style="float: right; text-decoration: none" onclick="javascript:app.view.UI.hideControls(); return false"><img src="resources/images/close.png" border="0" width="20" height="20"  data-l10n-id="app.actions.close"/></a>
+      <br>
+
+	<dl>
+
+	   <dt><label for="bgcolor" data-l10n-id="app.options.background_color">Background:</label></dt>
+	   <dd><input type="color" id="bgcolor" name="bgcolor" value="#0A7736" style="width: 100px"></dd>
+
+	</dl>
+      </DIV>
+
+      <DIV id="sound">
+      <H4 data-l10n-id="app.options.sound_title">Sound configuration</H4>
+        <dl>
+           <dt><label for="sounds" data-l10n-id="app.options.sound_effects">Effects:</label></dt>
+           <dd><input id='sounds' type="checkbox" value="1"></dd>
+	</dl>
+      </DIV>
+
+      <DIV class="logon" style="display: none">
+      <DIV id="push_notifications" style="display: none">
+      <H4 data-l10n-id="app.options.push_notifications_title">App notifications</H4>
+        <dl>
+           <dt><label for="allow_push_notifications" data-l10n-id="app.options.allow_push_notifications">Allow:</label></dt>
+           <dd><input id='allow_push_notifications' type="checkbox" value="0"></dd>
+	</dl>
+      </DIV>
+      </DIV>
+
+
+      <DIV id="ai">
+      <H4 data-l10n-id="app.options.ai_title">AI engine configuration</H4>
+	<dl>
+	   <dt><label for="algorithm_name" data-l10n-id="app.options.ai_algorithm">Algorithm:</label></dt>
+	   <dd><select id="algorithm_name">
+		<option value="alphaBeta">Alpha-Beta</option>
+		<option value="negascout">Negascout</option>
+		<option value="MTDf">MTDf</option>
+		<option value="MCTS">MCTS</option>
+	      </select>
+           </dd>
+           <dt><label for="level" data-l10n-id="app.options.ai_level">Level:</label></dt>
+           <dd><input id='level' value="6" size="3" maxlength="3"></dd>
+	   <dt class="ai_thinkingtime_option"><label for="level" data-l10n-id="app.options.ai_thinkingtime">Max. time:</label></dt>
+           <dd class="ai_thinkingtime_option"><input id='thinkingTime' value="10" size="3" maxlength="3"><p data-l10n-id="app.options.ai_thinkingtime_units">secs.</p></dd>
+	</dl>
+      </DIV>
+
+      <DIV id="storage" style="display: none;">
+      <H4>Saved games</H4>
+           <dl>
+           <dt><label for="saved_games">Name:</label></dt>
+           <dd><select name="saved_games"></select></dd>
+           </dl>
+
+           <button id='btnSaveGame' style="clear:left">Save</button>
+           <button id='btnLoadGame'>Load</button>
+           <button id='btnDeleteGame'>Delete</button>
+           <button id='btnDeleteAllGames'>Delete all</button>
+      </DIV>
+
+      <DIV id="promotion_option">
+      <H4 data-l10n-id="app.options.pawn_promotion_title">Pawn promotion</H4>
+         <dl>
+           <dt><label for="promotion_piece" data-l10n-id="app.options.pawn_promotion_label">Promote to:</label></dt>
+           <dd><select id="promotion_piece">
+                <option value="Q" data-l10n-id="app.options.pawn_promotion_queen">Queen</option>
+                <option value="R" data-l10n-id="app.options.pawn_promotion_rook">Rook</option>
+                <option value="B" data-l10n-id="app.options.pawn_promotion_bishop">Bishop</option>
+                <option value="N" data-l10n-id="app.options.pawn_promotion_knight">Knight</option>
+              </select>
+           </dd>
+         </dl>
+
+      </DIV>
+
+
+      </div>
+
+      <div id="games">
+      <DIV id="network">
+      <H4><a href="javascript:app.view.UI.hideControls()" data-l10n-id="app.games.title">Games &amp; players</a></H4>
+      <a href="#" style="float: right; text-decoration: none" onclick="javascript:app.view.UI.hideControls(); return false"><img src="resources/images/close.png" border="0" width="20" height="20" data-l10n-id="app.actions.close"/></a>
+      <br>
+
+
+          <table style="float: left; clear: left; border-spacing: 0">
+          <tr>
+            <td><dt><label for="server_url" data-l10n-id="app.network.wgs_url">WGS url:</label></dt></td>
+            <td><input name="server_url" id="server_url" name="server_url" value='ws://localhost:8080/wgs'></td>
+            <td rowspan="3" valign="top">
+               <button id="btnProfile" style="display: none; width: 3.5em; height: 4em"><img id="user_picture" src="/images/anonymous.png" width="48" height="48" title="Profile"></button>
+            </td>
+          </tr>
+          <tr>
+            <td><label for="user" data-l10n-id="app.network.wgs_user">User:</label></td>
+            <td><input id="user" name="user" value=""></td>
+          </tr>
+          <tr>
+            <td><label for="password" id="lbl_password" data-l10n-id="app.network.wgs_password">Password:</label></td>
+            <td><input id="password" type="password" value=""></td>
+          </tr>
+          </tbody>
+        </table>
+
+      <!--<DIV id="extend_list" style="width:100%">-->
+      <button id="btnConnect" style="clear:left" data-l10n-id="app.network.connect">Connect</button>
+      <button id="oic_connect">&nbsp;</button>
+      <button id="btnRegister" data-l10n-id="app.network.signup">Register</button>
+
+      <ul id="openid_providers_menu" style="display: none;">
+         <!--<li><a href="javascript:openid_connect(false);">OpenID Connect provider</a></li>-->
+      </ul>    
+      <!--</DIV>-->
+
+
+      </DIV>
+
+
+      <div id="profile_section" style="display: none">
+        <H4 data-l10n-id="app.profile.title">Profile</H4>
+        <a href="#" style="float: right; text-decoration: none" onclick="$('#profile_section').hide(); return false"><img src="resources/images/close.png" border="0" width="16" height="16" style="margin-top: 10px" data-l10n-id="app.actions.close"/></a>
+
+        <dl>
+          <dt data-l10n-id="app.profile.versus">Versus:</dt>
+          <dd><select id="profile_filter" onChange="app.lobby.loadProfile(); return false;">
+                <option value="" data-l10n-id="app.profile.all">All</option>
+              </select></dd>
+        </dl>
+        <table id="profile_apps" class="scrollTable" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 1em">
+           <thead>
+             <tr>
+               <th data-l10n-id="app.profile.game">Game</th>
+               <th data-l10n-id="app.profile.active">Active</th>
+               <th data-l10n-id="app.profile.wins">Wins</th>
+               <th data-l10n-id="app.profile.draws">Draws</th>
+               <th data-l10n-id="app.profile.losses">Losses</th>
+               <th data-l10n-id="app.profile.ranking">Ranking</th>
+             </tr>
+           </thead>
+           <tbody>
+           </tbody>
+       </table>
+      </div>
+
+      <div id="ranking_section" style="display: none">
+        <H4 data-l10n-id="app.ranking.title">Top rankings for <span id="ranking_app"></span></H4>
+        <a href="#" style="float: right; text-decoration: none" onclick="$('#ranking_section').hide(); return false"><img src="resources/images/close.png" border="0" width="16" height="16" style="margin-top: 10px" data-l10n-id="app.actions.close"/></a>
+
+        <table id="ranking_order" class="scrollTable" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 1em">
+           <thead>
+             <tr>
+               <th data-l10n-id="app.ranking.order">Order</th>
+               <th data-l10n-id="app.ranking.user">User</th>
+               <th data-l10n-id="app.ranking.rating_deviation">Rating&plusmn;deviation (volatility)</th>
+             </tr>
+           </thead>
+           <tbody>
+           </tbody>
+       </table>
+      </div>
+
+
+      <div id="games_section" style="display: none">
+      <H4 data-l10n-id="app.network.game_list.title">Select match:</H4>
+      <div style="float: right; margin-top: 5px">
+      <input id="rbGameListFilterMine" name="rbGameListFilter" type="radio" value="mine" style="float: left; margin-top: 2px; vertical-align: middle;" onChange="javascript:app.lobby.listGames()" checked="checked"><label id="Mine" for="rbGameListFilterMine" style="float: left; clear: none">Mine</label>
+      <input id="rbGameListFilterAll" name="rbGameListFilter" type="radio" value="visible" style="margin-left: 5px; clear: none; float: left; margin-top: 2px; vertical-align: middle;" onChange="javascript:app.lobby.listGames()"><label id="All" for="rbGameListFilterAll" style="float: left; clear: none; margin-right: 5px">All</label>
+      </div>
+        <table id="groupsTable" class="scrollTable" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <thead>
+             <tr>
+              <th data-l10n-id="app.network.game_list.game">Game</th>
+              <th data-l10n-id="app.network.game_list.status">Status</th>
+              <th data-l10n-id="app.network.game_list.num">#</th>
+              <th data-l10n-id="app.network.game_list.members">Members</th>
+            </tr>
+          </thead> 
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="matching_options" style="display: none">
+        <H4 data-l10n-id="app.network.game_options.title">Create match</H4>
+
+        <dl>
+	  <dt><label for="new_grp_type" data-l10n-id="app.games.game_type">Type</label> <a id="help" href="#">(?)</a>:</dt>
+	  <dd><select id="new_grp_type">
+		<option value="botifarra-51" data-l10n-id="app.games.botifarra-51">Botifarra - 51</option>
+		<option value="botifarra-101" data-l10n-id="app.games.botifarra-101" selected>Botifarra - 101</option>
+		<option value="botifarra-151" data-l10n-id="app.games.botifarra-151">Botifarra - 151</option>
+	      </select>
+          </dd>
+
+          <dt><label for="new_grp_role" data-l10n-id="app.network.game_options.role">Role:</label></dt>
+          <dd><select id="new_grp_role" name="new_grp_role">
+                <option value="" data-l10n-id="app.network.game_options.any_role">Any</option>
+                <option value="P1S" data-l10n-id="app.network.game_options.p1s_role">P1 South</option>
+                <option value="P1N" data-l10n-id="app.network.game_options.p1n_role">P1 North</option>
+                <option value="P2E" data-l10n-id="app.network.game_options.p2e_role">P2 East</option>
+                <option value="P2W" data-l10n-id="app.network.game_options.p2w_role">P2 West</option></select></dd>
+
+          <dt><label for="new_grp_opponent" data-l10n-id="app.network.game_options.opponent">Opponent:</label></dt>
+          <dd><select name="new_grp_opponent" id="new_grp_opponent">
+                <option value="" data-l10n-id="app.network.game_options.automatch">Auto-match</option>
+              </select>
+          </dd>
+
+          <dt><label for="new_grp_observable" data-l10n-id="app.network.game_options.observable">Observable:</label></dt>
+          <dd><input type="checkbox" name="new_grp_observable" id="new_grp_observable" checked="checked">
+          </dd>
+
+
+
+        </dl>
+      </div>
+
+      <div id="chat_section" style="display: none">
+        <H4 data-l10n-id="app.network.game_chat.title">Game chat</H4>
+        <textarea id="line" cols="28" style="height: 40px; float: left; clear: left" onkeypress="if(event.keyCode == 13) { app.view.UI.sendChatLine(); return false; }"></textarea><button id="btnSendChatLine" style="float: left; margin-left: 3px" data-l10n-id="app.network.game_chat.send">Send</button></td>
+        <textarea id="chat" style="clear: both; float: left; width: 100%; height: 200px" readonly></textarea>
+      </div>
+
+
+
+      <button id="btnHideMatchingOptions" style="clear:both" data-l10n-id="app.network.back_to_lobby">Back to lobby</button>
+      <button id="btnCreateGame" data-l10n-id="app.actions.create_game">Create</button>
+
+      <button id="btnShowMatchingOptions" data-l10n-id="app.actions.new_game_options">New...</button>
+      <button id="btnDeleteFinishedGames" data-l10n-id="app.network.delete_finished_games">Delete finished</button>
+
+
+      <!--
+      <button id='btnRetractMove' style="display: none" data-l10n-id="app.actions.retract_move">Retract move</button>
+      <button id="btnDrawGame" data-l10n-id="app.network.game_stalled">Draw</button>
+      <button id="btnResignGame" data-l10n-id="app.network.resign">Resign</button>
+      -->
+
+      <button id="btnDisconnect" data-l10n-id="app.network.disconnect">Disconnect</button>
+
+    </div>
+
+  </DIV>
+
+
+  <div id="menu" style="float: right;">
+        <button id='btnGame' onclick="javascript:app.view.UI.showGames(); return false;"><img src="resources/images/games.png" width="24" height="24" data-l10n-id="app.actions.games"></button>
+        <button id="btnOptions" onclick="javascript:app.view.UI.showOptions(); return false;"><img src="resources/images/options.png" width="24" height="24"  data-l10n-id="app.actions.options"></button>
+        <button id="btnAbout" onclick="javascript:app.view.UI.showCredits(); return false;"><img src="resources/images/about.png" width="24" height="24" data-l10n-id="app.actions.about"></button>
+  </div>
+
+ 
+</FORM>
+
+  <DIV id="messageBox">
+    <table border="0" width="100%" height="100%">
+    <tr>
+    <td valign="middle" align="center">
+    <div id="message">
+	<a href="https://developers.google.com/analytics/devguides/collection/analyticsjs/cookie-usage" target="_blank" data-l10n-id="app.messages.cookies"></a>
+    </div>
+    </td>
+    <td valign="top" align="right" width="16">
+    <a href="#" style="text-decoration: none" onclick="javascript:app.view.UI.showMessage(false); return false"><img src="resources/images/close.png" border="0" width="16" height="16" data-l10n-id="app.actions.close"/></a>
+    </td>
+    </tr>
+    </table>
+  </DIV>
+
+  <!-- preload translated messages for modal dialogs -->
+  <DIV id="preloaded_messages" style="display:none">
+	<div id="confirm_retract_move" data-l10n-id="app.messages.confirm_retract_move">Retract move?</div>
+	<div id="confirm_resign" data-l10n-id="app.messages.confirm_resign">Do you really want to resign?</div>
+	<div id="confirm_draw_offer" data-l10n-id="app.messages.confirm_draw_offer">Do you really want to offer a draw?</div>
+	<div id="confirm_draw_acceptation" data-l10n-id="app.messages.confirm_draw_acceptation">Accept draw?</div>
+	<div id="confirm_game_request" data-l10n-id="app.messages.confirm_game_request">Accept game request?</div>
+	<div id="confirm_game_state_load" data-l10n-id="app.messages.confirm_game_state_load">Play opponent's new game?</div>
+	<div id="confirm_castle" data-l10n-id="app.messages.confirm_castle">Castle?</div>
+	<div id="empty_member_title" data-l10n-id="app.member.empty">Empty</div>
+  </DIV>
+
+
+
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+
+</BODY>
+
+</HTML>

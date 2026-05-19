@@ -1,0 +1,69 @@
+#root {
+  margin: 0 auto;
+  padding: 0px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+
+}
+
+fieldset {
+  border: 1px #402b2a solid;
+  border-radius: 16px;
+  padding: 5px;
+}
+
+legend {
+  border-color: #402b2a;
+  border-width: 0px;
+  border-radius: 8px;
+  margin-left: -1px;
+  padding: 4px;
+  border-style: solid;
+}
+
+.playerHand {
+  display: flex;
+  flex-flow: column;
+  flex-direction: column;
+  align-items: center;
+  height: 180px;
+  width: 100%;
+}
+
+.card {
+  touch-action: none;
+  min-width: 100px;
+  width: 104px;
+  height: 159px;
+  transition: margin-right 0.35s ease-out;
+}
+
+.card:hover:not(:nth-last-child(2)) {
+  margin-right: 0px !important;
+  transition: margin-right 0.35s ease-out;
+}
+
+.cardTouch:not(:nth-last-child(2)) {
+  margin-right: 0px !important;
+  transition: margin-right 0.35s ease-out;
+}
+
+
+
+button.cardImage {
+	border-width: 0px; 
+	border-radius: 16px; 
+	margin: 0px;
+	padding: 0px;
+	background: url("/src/assets/cards.png") no-repeat top left;
+	background-size: auto;
+	width: 208px;
+	height: 319px;
+        cursor: pointer;
+}
+
+button.cardImage:disabled {
+	cursor: default;
+}
