@@ -195,7 +195,7 @@ function authentication(state, msg) {
         
 }
 
-var oauth2ClientName = "WebGL 8x8 board games";
+var oauth2ClientName = "Botifarra game";
 function getOAuth2ClientName()
 {
     return oauth2ClientName;
@@ -298,6 +298,22 @@ function updateNotificationChannel(subscription) {
   }
 }
 
+function base64UrlToUint8Array(base64Url) {
+  const padding = '='.repeat((4 - base64Url.length % 4) % 4);
+  const base64 = (base64Url + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+
 function initPushNotifications() {  
   // Are Notifications supported in the service worker?  
   console.log('initPushNotifications');  
@@ -336,6 +352,7 @@ function initPushNotifications() {
     // Do we already have a push message subscription?  
     serviceWorkerRegistration.pushManager.getSubscription()  
       .then(function(subscription) {  
+	debugger;
         $("#push_notifications").show();
 
         if (!subscription) {  
@@ -354,9 +371,11 @@ function initPushNotifications() {
   });  
 }
 
-function subscribe() {  
+function subscribe(publicKey) {  
+  let subscribeOptions = { userVisibleOnly: true };
+  if(publicKey) subscribeOptions.applicationServerKey = publicKey;
   navigator.serviceWorker.ready.then(function(serviceWorkerRegistration) {  
-    serviceWorkerRegistration.pushManager.subscribe({userVisibleOnly: true})  
+    serviceWorkerRegistration.pushManager.subscribe(subscribeOptions)  
       .then(function(subscription) {  
         // The subscription was successful  
         updateNotificationChannel(subscription);
@@ -399,6 +418,7 @@ function unsubscribe() {
 }
 
 function initApp() {
+  debugger;
   app.view.board.init(); 
   //app.view.UI.createGame(); 
   //app.controller.Storage.listGames(); 
@@ -441,15 +461,28 @@ function initApp() {
   }
 
 
-
   $("#allow_push_notifications").change(function() {  
     var enabled = $(this).prop('checked');
     if(notificationChannel != null) {  
       unsubscribe();  
     } else {  
-      subscribe();  
+      var wgsclient = app.lobby.getWgsClient(null);
+      if(wgsclient != null)  {
+            debugger;
+            wgsclient.getNotificationServicePublicKeyForVAPID(oauth2ClientName, function(id,details,errorURI,result,resultKw) {
+              if(!result) {
+                alert("VAPID public key not received from WGS server");
+              } else {
+                debugger;
+                var publicKeyBase64Url = result[0];
+                var publicKey = base64UrlToUint8Array(publicKeyBase64Url);
+                subscribe(publicKey);  
+              }
+            });
+      }
     }  
   });
+
 
   if('serviceWorker' in navigator) {  
     navigator.serviceWorker.register('service-worker.js').then(initPushNotifications);  

@@ -53,6 +53,10 @@ WgsClient.prototype.setUserPushChannel = function(appName, notificationChannel) 
     this.call("wgs.set_user_push_channel", [appName, notificationChannel]);
 }
 
+WgsClient.prototype.getNotificationServicePublicKeyForVAPID = function(appName, callback) {
+     this.call("wgs.get_notification_service_public_key_for_vapid", [appName], {}).then(callback, callback);
+}
+
 WgsClient.prototype.registerUser = function(appName, realm, user, password, email, notificationChannel, onstatechange) {
     var client = this;
     var details = { "authmethods": ["anonymous"] };
@@ -192,8 +196,6 @@ WgsClient.prototype.deleteApp = function(appId, callback) {
 }
 
 WgsClient.prototype._update_group_users = function(id,details,errorURI,payload, payloadKw, topicURI, group_change_callback, register_callback) {
-    debugger;
-    console.log("_update_group_users: topic=", topicURI);
     var client = this;
     if(payloadKw.connections) {
         client.groups[payloadKw.gid] = new Object();
