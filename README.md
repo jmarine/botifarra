@@ -32,8 +32,11 @@ Copy generated files contained in "dist" folder to "/botifarra" virtual folder o
 This application also requires a [WGS server](https://github.com/jmarine/wgs) to support multi-player online games. To install a private WGS server, follow these [instructions](https://github.com/jmarine/wgs/wiki/Installation). After installation, you need to access [WGS's administration page](http://localhost:8080/admin.html), and create 3 applications with the names: **botifarra-51**, **botifarra-101** and **botifarra-151** with the following properties:
 - Validator: org.wgs.service.game.BotifarraCardGamesValidator
 - Internal Data Class: select "Card"
-- Min.: 4 players
-- Max.: 4 players
+- Min.Players: 4 players
+- Max.Players: 4 players
+- Min team players: 2 players
+- Max team players: 2 players
+- Min teams: 2 teams 
 - Roles (optional): P1S, P2E, P1N, P2W
 
 
