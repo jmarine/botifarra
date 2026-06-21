@@ -235,6 +235,8 @@ onConnect: function(msg) {
       this.user = msg;
       this.nick = msg.user;
       this.listGames();
+      app.tournaments.list();
+      app.tournaments.showAccessButton();
     }
 },
 
@@ -891,6 +893,8 @@ listGames: function()
 disconnect: function() {
     console.log("Disconnecting.");
     if(this.wgsclient) {
+        app.tournaments.hideAccessButton();
+        app.tournaments.unsubscribe();
 
         this.exitGame(true);
         this.wgsclient.close();

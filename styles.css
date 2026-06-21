@@ -80,7 +80,7 @@ body {
   user-select: none; -webkit-user-select: none; -moz-user-select: none;
 }
 
-#options, #games, #title {
+#options, #games, #title, #tournaments {
   display: none;
   margin: 10px 20px 10px 20px;
 }
@@ -114,6 +114,9 @@ body {
   -webkit-user-select: none; -moz-user-select: none; user-select: none; 
 }
 
+select option:checked {
+	background-color: #ba9272;
+}
 
 select.list {
   width: 250px;
@@ -213,7 +216,7 @@ button:disabled, input:disabled {
   color: #777777;
 }
 
-#btnGame, #btnOptions, #btnAbout, #btnClose {
+#btnGame, #btnOptions, #btnTournaments, #btnAbout, #btnClose {
   clear: both;   
   background-color: #f7e3a4; 
   border: 3px solid #402b2a;
