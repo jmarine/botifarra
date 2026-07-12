@@ -253,6 +253,15 @@ function App() {
 	  window.app.lobby.end_game();
   };
 
+  const resignGame = (event) => {
+	  debugger;
+	  window.app.lobby.resign();
+  };
+
+  const claimVictory = (event) => {
+	  debugger;
+	  window.app.lobby.claimVictory();
+  };
 
   const toggleUserState = (event) => {
 	  window.app.lobby.toggle_client_state();
@@ -314,7 +323,12 @@ function App() {
 
     <div style={{clear: "both"}}>
 	  { (state == "OPEN") && (<button id="btnStartGame" data-l10n-id="app.actions.start_game" onClick={startGame}>Start</button>) }
-          { (state != "FINISHED") && (<button id="btnFinishGame" data-l10n-id="app.actions.end_game" onClick={endGame}>End</button>) }
+          { (state == "OPEN") && (<button id="btnFinishGame" data-l10n-id="app.actions.end_game" onClick={endGame}>End</button>) }
+          { (state == "STARTED") && (<>
+		                       <button id="btnResign" data-l10n-id="app.network.resign" onClick={resignGame}>Resign</button>
+		  		       <button id="btnClaimVictory" data-l10n-id="app.network.claim_victory" onClick={claimVictory}>Claim victory</button>
+		                     </>
+	  			    ) }
 	  { (state == "OPEN") && (<button id="toggle_client_state" onClick={toggleUserState}>Ready</button>) }
     </div>
 </div>

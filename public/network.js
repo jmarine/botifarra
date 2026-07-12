@@ -449,6 +449,18 @@ resign: function() {
     }
 },
 
+claimVictory: function() {
+  var slot = -1;
+  var group = app.lobby.currentGroup;
+  if(this.wgsclient && group && group.state != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
+    var data = "";
+    if(this.wgsclient.isMemberOfGroup(group.gid)) {
+      slot = this.wgsclient.getSlotOfGroup(group.gid);
+    }
+    this.wgsclient.addAction(group.gid, slot, "CLAIM_VICTORY", data);
+  }
+},
+
 offerDraw: function() {
   var group = app.lobby.currentGroup;
   if(this.wgsclient && group && group.state != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
