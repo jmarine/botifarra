@@ -56,7 +56,7 @@ Game.prototype.getTurn = function() {
 }
 
 Game.prototype.isOver = function() {
-  return (this.getMovements().length == 0);
+  return (this.winner >= 0 || this.getMovements().length == 0);
 }
 
 Game.prototype.toggleTurn = function() {
@@ -99,6 +99,7 @@ Game.prototype.initFromStateStr = function(str) {
 }
 
 Game.prototype.newGame = function(player1, player2) {
+  this.winner = -1;
 }
 
 Game.prototype.parseMoveString = function(str) {
@@ -121,7 +122,11 @@ Game.prototype.getMovements = function() {
 }
 
 Game.prototype.getWinner = function() {
-  return NONE;
+  return (this.winner != null) ? this.winner : -1;
+}
+
+Game.prototype.setWinner = function(winner) {
+  this.winner = winner;  // i.e. force winner after resign
 }
 
 
