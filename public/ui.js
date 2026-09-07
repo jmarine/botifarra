@@ -34,13 +34,13 @@ notifyExposedCard: function(slotOffset, pos, card) {
   window.dispatchEvent(customEvent);
 },
 
-notifyFlow: function(state, spectator, slot, turn, flow) {
+notifyFlow: function(status, spectator, slot, turn, flow) {
   let customEvent = new CustomEvent('update-flow');
   customEvent.spectator = spectator;
   if(slot != null) customEvent.slot = slot;
   if(turn != null) customEvent.turn = turn;
   if(flow != null) customEvent.flow = flow;
-  if(state != null) customEvent.state = state;
+  if(status != null) customEvent.status = status;
 
   debugger;
   window.dispatchEvent(customEvent);

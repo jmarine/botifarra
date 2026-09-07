@@ -16,7 +16,7 @@ function App() {
 
   const [spectator, setSpectator] = useState(false);
 
-  const [state, setState] = useState("");
+  const [status, setStatus] = useState("");
 
   const [scores, setScores] = useState([0, 0]);
 
@@ -42,7 +42,7 @@ function App() {
   useEffect(() => {
 
     const clearGame = (event) => {
-	    setState("OPEN");
+	    setStatus("OPEN");
 	    setScores([0, 0]);
 	    setMultiplier(1);
 	    setTrump(dorso);
@@ -59,7 +59,7 @@ function App() {
        var specData = event.spectator;
        var slotData = event.slot;
        var turnData = event.turn;
-       var stateData = event.state;
+       var statusData = event.status;
        var trumpCard = dorso;
        var _scores = [ 0, 0 ];
 
@@ -93,8 +93,8 @@ function App() {
        if(slotData != null) {
 	       setSlotOffset(parseInt(slotData));
        }
-       if(stateData != null) {
-	       setState(stateData);
+       if(statusData != null) {
+	       setStatus(statusData);
        }
        if(specData != null) {
 	       setSpectator(specData);
@@ -137,7 +137,7 @@ function App() {
       window.removeEventListener('update-exposed-card', updateExposedCard);
       window.removeEventListener('update-flow', updateFlow);
     };
-  }, [slotOffset, playerCards, exposedCards, state, scores, trump, delegate, multiplier]);
+  }, [slotOffset, playerCards, exposedCards, status, scores, trump, delegate, multiplier]);
 
 
   const resetExposedCards = () => {
@@ -263,8 +263,8 @@ function App() {
 	  window.app.lobby.claimVictory();
   };
 
-  const toggleUserState = (event) => {
-	  window.app.lobby.toggle_client_state();
+  const toggleUserStatus = (event) => {
+	  window.app.lobby.toggle_client_status();
   };
 
 
@@ -287,7 +287,7 @@ function App() {
           <table style={{marginBottom: "10px"}}>
 	    <tbody>
 	      <tr><th align="left" data-l10n-id="app.games.status">Status</th></tr>
-	      <tr><td><span id="lblGameStatus" data-l10n-id={"app.group.state." + state.toLowerCase()}>{state}</span></td></tr>
+	      <tr><td><span id="lblGameStatus" data-l10n-id={"app.group.status." + status.toLowerCase()}>{status}</span></td></tr>
             </tbody>
           </table>
 
@@ -322,19 +322,19 @@ function App() {
     </div>
 
     <div style={{clear: "both"}}>
-	  { (state == "OPEN") && (<button id="btnStartGame" data-l10n-id="app.actions.start_game" onClick={startGame}>Start</button>) }
-          { (state == "OPEN") && (<button id="btnFinishGame" data-l10n-id="app.actions.end_game" onClick={endGame}>End</button>) }
-          { (state == "STARTED") && (<>
+	  { (status == "OPEN") && (<button id="btnStartGame" data-l10n-id="app.actions.start_game" onClick={startGame}>Start</button>) }
+          { (status == "OPEN") && (<button id="btnFinishGame" data-l10n-id="app.actions.end_game" onClick={endGame}>End</button>) }
+          { (status == "STARTED") && (<>
 		                       <button id="btnResign" data-l10n-id="app.network.resign" onClick={resignGame}>Resign</button>
 		  		       <button id="btnClaimVictory" data-l10n-id="app.network.claim_victory" onClick={claimVictory}>Claim victory</button>
 		                     </>
 	  			    ) }
-	  { (state == "OPEN") && (<button id="toggle_client_state" onClick={toggleUserState}>Ready</button>) }
+	  { (status == "OPEN") && (<button id="toggle_client_status" onClick={toggleUserStatus}>Ready</button>) }
     </div>
 </div>
 
 
-      <FlowStatus spectator={spectator} state={state} turn={turn} slotOffset={slotOffset} step={step} style={{flexGrow: 1}} />
+      <FlowStatus spectator={spectator} status={status} turn={turn} slotOffset={slotOffset} step={step} style={{flexGrow: 1}} />
       { (!spectator && turn == slotOffset && step != null && step == "trump") && (<TrumpCard delegate={delegate} onTrumpSelection={onTrumpSelection} style={{flexGrow: 1}} />) }
       { (!spectator && turn == slotOffset && step != null && step.indexOf("double") != -1) && (<DoubleQuestionBox onDoubleResponse={onDoubleResponse} multiplier={multiplier} style={{flexGrow: 1}}/>)}
       { (spectator || step == "play") && (<ExposedCards onCardSelection={onCardRetract} exposedCards={exposedCards} slotOffset={slotOffset} style={{flexGrow: 1}}/>)}

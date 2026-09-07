@@ -44,7 +44,7 @@ function update_group_callback(id,details,errorURI,payload,payloadKw) {
 		if(!payloadKw.is_join_event /* && payloadKw.action */) {
                   app.lobby.group_changed(payloadKw, app.lobby.currentGroupOptions); 
 
-                  if(payloadKw.state == "STARTED") {
+                  if(payloadKw.status == "STARTED") {
                     for(var index = 0; index < numRequiredMembers; index += 1) {
                         $("#member"+index+" option[selected!='selected']").remove();
                         //$("#role"+index+" option[selected!='selected']").remove();
@@ -97,7 +97,7 @@ function update_member(field, as_previous_client)
 
 
 function populate_group_member_fields(group, memberId, member, currentUserSelected) {
-    var memberState  = member.state ? member.state : "empty";
+    var memberStatus  = member.status ? member.status : "empty";
     var memberUserId = member.user  ? member.user  : "";
     var memberName   = member.name  ? member.name  : "";
     var memberSid    = member.sid   ? member.sid   : 0;
@@ -106,7 +106,7 @@ function populate_group_member_fields(group, memberId, member, currentUserSelect
 
     var users = [];
     var userOptions = "";
-    var isOpen = (group.state == "OPEN");
+    var isOpen = (group.status == "OPEN");
     var isAdmin = (app.lobby.wgsclient.user == app.lobby.currentGroup.admin);
     var currentUserSid = app.lobby.wgsclient.sid;
 
@@ -136,11 +136,11 @@ function populate_group_member_fields(group, memberId, member, currentUserSelect
     //$("#role" + memberId).append(roleOptions);
     
     
-    var status = memberState.toLowerCase();
-    if(status == "joined" && app.lobby.currentGroup.state == "STARTED") status = "ready";
+    var status = memberStatus.toLowerCase();
+    if(status == "joined" && app.lobby.currentGroup.status == "STARTED") status = "ready";
     if(status != 'empty') status = memberType.toLowerCase() + "_" + status;
-    $("#state" + memberId).attr("src", "resources/images/" + status + ".png");
-    $("#state" + memberId).attr("title", ((status!='empty')? memberType.toUpperCase():"") + " " + memberState);
+    $("#status" + memberId).attr("src", "resources/images/" + status + ".png");
+    $("#status" + memberId).attr("title", ((status!='empty')? memberType.toUpperCase():"") + " " + memberStatus);
 }
 
 function append_group_member(memberId, member, currentUserSelected) {
@@ -150,7 +150,7 @@ function append_group_member(memberId, member, currentUserSelected) {
     
     var html = '<tr>';
     html += '<td align="left"><label class="lblPlayer" id="lblPlayer' + (1+memberId) + '" data-l10n-id="app.player" data-l10n-args=\'{"player": ' + (1+memberId) +', "team": ' + team +'}\'>User ' + (1+memberId) + ' (T' + team +'):</label></td>';
-    html += '<td align="left"><img title="EMPTY" id="state' + memberId + '" src="resources/images/empty.png" border="0" /></td>';
+    html += '<td align="left"><img title="EMPTY" id="status' + memberId + '" src="resources/images/empty.png" border="0" /></td>';
     html += '<td><select id="member' + memberId + '" onchange="javascript:update_member(\'member'+memberId+'\')"></select></td>';
     html += '</tr>';
     
@@ -331,7 +331,7 @@ sendExposeRequest: function(game, card)
 
 deleteFinishedGroups: function() {
   this.wgsclient.deleteFinishedGroups();
-  $("#groupsTable>tbody>tr[state='FINISHED']").remove();
+  $("#groupsTable>tbody>tr[status='FINISHED']").remove();
 },
 
 
@@ -346,10 +346,10 @@ exitGame: function(disconnecting)
     $("#member1_info").hide();
     $("#member2_info").hide();
     $("#member3_info").hide();
-    $("#state0_info").hide();
-    $("#state1_info").hide();
-    $("#state2_info").hide();
-    $("#state3_info").hide();
+    $("#status0_info").hide();
+    $("#status1_info").hide();
+    $("#status2_info").hide();
+    $("#status3_info").hide();
     //$("#new_grp_type").removeAttr("disabled");
     $("#player1").removeAttr("disabled");
     $("#player2").removeAttr("disabled");
@@ -440,7 +440,7 @@ new_group: function() {
 
 resign: function() {
     var group = app.lobby.currentGroup;
-    if(this.wgsclient && group && group.state != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
+    if(this.wgsclient && group && group.status != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
         var slot = this.wgsclient.getSlotOfGroup(group.gid);
         var data = ""; 
         return this.wgsclient.addAction(group.gid, slot, "RESIGN", data);
@@ -452,7 +452,7 @@ resign: function() {
 claimVictory: function() {
   var slot = -1;
   var group = app.lobby.currentGroup;
-  if(this.wgsclient && group && group.state != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
+  if(this.wgsclient && group && group.status != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
     var data = "";
     if(this.wgsclient.isMemberOfGroup(group.gid)) {
       slot = this.wgsclient.getSlotOfGroup(group.gid);
@@ -463,7 +463,7 @@ claimVictory: function() {
 
 offerDraw: function() {
   var group = app.lobby.currentGroup;
-  if(this.wgsclient && group && group.state != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
+  if(this.wgsclient && group && group.status != "FINISHED" && this.wgsclient.isMemberOfGroup(group.gid)) {  // When player is not an observer
     var slot = this.wgsclient.getSlotOfGroup(group.gid);
     var data = ""; 
     this.wgsclient.addAction(group.gid, slot, "DRAW_QUESTION", data);
@@ -517,17 +517,17 @@ show_group_unused: function(group) {
     //$("#app_list").hide();
     //$("#group_list").hide();
     //$("#new_group_params").hide();
-    $("#toggle_client_state").html("Ready");
+    $("#toggle_client_status").html("Ready");
 
     if(app.lobby.wgsclient.user == app.lobby.currentGroup.admin) {
         $("#start_group").show();
-        $("#toggle_client_state").hide();
+        $("#toggle_client_status").hide();
         //$("#add_group_member").show();
         //$("#group_options").show();
     }
     else {
         $("#start_group").hide();
-        $("#toggle_client_state").show();
+        $("#toggle_client_status").show();
         //$("#add_group_member").hide();
         //$("#group_options").hide();
     }
@@ -536,31 +536,31 @@ show_group_unused: function(group) {
 
 },
 
-toggle_client_state: function()
+toggle_client_status: function()
 {
     var appId = app.lobby.currentApp;
     var gid = app.lobby.currentGroup.gid;
-    var state = "";
+    var status = "";
  
-    if($("#toggle_client_state").html().toUpperCase()=="READY") {
-        $("#toggle_client_state").html("Busy");
-        state = "READY";
+    if($("#toggle_client_status").html().toUpperCase()=="READY") {
+        $("#toggle_client_status").html("Busy");
+        status = "READY";
     } else {
-        $("#toggle_client_state").html("Ready");
-        state = "JOINED";
+        $("#toggle_client_status").html("Ready");
+        status = "JOINED";
     }
 
-    app.lobby.wgsclient.updateMember(appId, gid, state, NaN, false, false, false, false, false, update_group_callback);
+    app.lobby.wgsclient.updateMember(appId, gid, status, NaN, false, false, false, false, false, update_group_callback);
 },
 
 group_opened: function(group) {
     console.log("group opened: " + JSON.stringify(group));
     app.view.UI.clearChat();
     $("#chat_section").show();
-    $("#state0_info").show();
-    $("#state1_info").show();
-    $("#state2_info").show();
-    $("#state3_info").show();
+    $("#status0_info").show();
+    $("#status1_info").show();
+    $("#status2_info").show();
+    $("#status3_info").show();
     app.view.UI.hideControls();    
 
     $('#start').hide();
@@ -571,7 +571,7 @@ group_opened: function(group) {
     $("#btnShowMatchingOptions").hide();
     $("#btnHideMatchingOptions").show();
     $("#btnDeleteFinishedGames").hide();
-    if(this.wgsclient.isMemberOfGroup(group.gid) && group.state != "FINISHED") {
+    if(this.wgsclient.isMemberOfGroup(group.gid) && group.status != "FINISHED") {
          $("#btnResignGame").show();
          $("#btnDrawGame").show();
          $("#btnRetractMove").show();
@@ -618,7 +618,7 @@ group_changed: function(group, options) {
     var flow = group.flow;
     if(group || flow || turn != null) {
 	if(group.data != null) game.initFromStateStr(group.data);
-        app.view.UI.notifyFlow(group.state, options.spectator, slotOffset, turn, flow);
+        app.view.UI.notifyFlow(group.status, options.spectator, slotOffset, turn, flow);
     }
 
     var cards = group.privateState;
@@ -703,22 +703,22 @@ start_game: function() {
 
 
 end_game: function() {
-    var newState = "FINISHED";
-    this.update_group(newState);
+    var newStatus = "FINISHED";
+    this.update_group(newStatus);
 },
 
-update_group: function(newState) {
+update_group: function(newStatus) {
     var group = app.lobby.currentGroup;
 
     if(this.wgsclient.user == group.admin /* || this.wgsclient.isMemberOfGroup(group.gid) */ ) {
         if(confirm("Are you sure?")) {
 
-            this.wgsclient.updateGroup(group.appId, group.gid, newState, false, group.data, group.automatch, group.hidden, group.observable, group.dynamic, group.alliances, function(id,details,errorURI,result,resultKw) {
+            this.wgsclient.updateGroup(group.appId, group.gid, newStatus, false, group.data, group.automatch, group.hidden, group.observable, group.dynamic, group.alliances, function(id,details,errorURI,result,resultKw) {
 		debugger;
                 if(errorURI) document.l10n.formatValue(errorURI).then(function(msg) { alert(msg) });
             });
 
-            group.state = newState;
+            group.status = newStatus;
         }
 
     }
@@ -768,7 +768,7 @@ open_group: function(appId, gid, options) {
 },
 
 getGroupDescription: function(group) {
-    return group.state + " (" + group.num + "/" + group.max + "): " + group.description;
+    return group.status + " (" + group.num + "/" + group.max + "): " + group.description;
 },
 
 addGroupListItem: function(group) {
@@ -777,7 +777,7 @@ addGroupListItem: function(group) {
    opt.attr("gid", group.gid);
    opt.attr('observable', group.observable);   
    opt.attr('class', "scrollTableRow");
-   opt.attr('state', group.state);
+   opt.attr('status', group.status);
 
    var viewButton = "";
    if(group.observable || group.admin == app.lobby.wgsclient.user) {
@@ -785,7 +785,7 @@ addGroupListItem: function(group) {
    }
    
    opt.append('<td data-l10n-id="app.games.' + group.appName +'">' + group.appName + '</td>');
-   opt.append('<td><span data-l10n-id="app.group.state.'+group.state.toLowerCase()+'">' + group.state + "</span>" + (group.password? "<br><span data-l10n-id='app.group.password'></span>" : "" ) + '</td>');
+   opt.append('<td><span data-l10n-id="app.group.status.'+group.status.toLowerCase()+'">' + group.status + "</span>" + (group.password? "<br><span data-l10n-id='app.group.password'></span>" : "" ) + '</td>');
    opt.append('<td>' + group.num + "/" + group.max + viewButton + "</td>");
    
    
@@ -798,7 +798,7 @@ addGroupListItem: function(group) {
        var team = 1 + (count % 2); 
        count++;
        var playerLabel = "<span data-l10n-id='app.player' data-l10n-args='{\"player\": " + count + ", \"team\": " + team + "}'></span>"; // + (member.role? " ("+ member.role +")" : "");
-       if(group.state != "FINISHED" && index == group.turn) {
+       if(group.status != "FINISHED" && index == group.turn) {
           playerLabel = "<b>" + playerLabel + "</b>"; 
           if(group.members[group.turn].user == app.lobby.wgsclient.user) localPlayerTurn = true;
        }

@@ -1,11 +1,11 @@
-function FlowStatus({spectator, state, turn, slotOffset, step, style}) {
+function FlowStatus({spectator, status, turn, slotOffset, step, style}) {
 
   let message = false;
-  if(state == "") {
+  if(status == "") {
      message = "Connect to WGS server and select game";
-  } else if(state == "FINISHED") { 
+  } else if(status == "FINISHED") { 
      message = "Game over";
-  } else if(state == "OPEN") {
+  } else if(status == "OPEN") {
      message = "Waiting players to press ready & game start";
   } else if(spectator) {
      message = "Spectating game";
