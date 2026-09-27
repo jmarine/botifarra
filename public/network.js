@@ -621,7 +621,7 @@ group_changed: function(group, options) {
         app.view.UI.notifyFlow(group.status, options.spectator, slotOffset, turn, flow);
     }
 
-    var cards = group.privateState;
+    var cards = group.privateData;
     if(cards) {
         app.view.UI.notifyPlayerCards(slotOffset, cards);
     }
