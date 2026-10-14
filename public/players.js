@@ -1,6 +1,6 @@
 /*
-    WebGL 8x8 board games
-    Copyright (C) 2011 by Jordi Mariné Fort
+    Botifarra game
+    Copyright (C) 2026 by Jordi Mariné Fort
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
