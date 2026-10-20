@@ -39,9 +39,15 @@ var app = app || {}
 app.model = app.model || {}
 app.model.GameFactory = {
   createGame: function(gameType) {
-    var camelGameType = gameType.substring(0,1).toUpperCase() + gameType.substring(1, gameType.indexOf('-')).toLowerCase();
-    var points = gameType.substring(gameType.indexOf('-')+1);
-    return eval(" new app.model." + camelGameType + "(" + points + ")");
+    var variants = "";
+    var pos = gameType.indexOf('-');
+    if(pos != -1) {
+        variants = gameType.substring(pos+1).replace(/-/g, ",");
+        gameType = gameType.substring(0, pos);
+    }
+
+    var camelGameType = gameType.substring(0,1).toUpperCase() + gameType.substring(1).toLowerCase();
+    return eval(" new app.model." + camelGameType + "(" + variants + ")");  // allow many game variants
   }
 }
 

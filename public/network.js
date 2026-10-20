@@ -581,7 +581,7 @@ group_opened: function(group) {
          $("#btnRetractMove").hide();
     }
 
-    //$("select[id=new_grp_type]").val(group.appName);
+    $("#new_grp_type").val(group.appName);
     //$('#new_grp_type').attr('disabled','disabled');
 
     app.view.UI.showMessage(false);

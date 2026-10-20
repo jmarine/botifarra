@@ -10,7 +10,6 @@ nextMsgId: 0,
 
 clearGame: function() {
   let customEvent = new CustomEvent('clear-game');
-  debugger;
   window.dispatchEvent(customEvent);
 },
 
@@ -19,7 +18,6 @@ notifyPlayerCards: function(slot, cards) {
   customEvent.slot = slot;
   customEvent.cards = cards;
 
-  debugger;
   window.dispatchEvent(customEvent);
 },
 
@@ -30,7 +28,6 @@ notifyExposedCard: function(slotOffset, pos, card) {
   customEvent.pos = pos;
   customEvent.card = card;
 
-  debugger;
   window.dispatchEvent(customEvent);
 },
 
@@ -42,30 +39,27 @@ notifyFlow: function(status, spectator, slot, turn, flow) {
   if(flow != null) customEvent.flow = flow;
   if(status != null) customEvent.status = status;
 
-  debugger;
   window.dispatchEvent(customEvent);
 },
 
 
 
 getGameType: function() {
-  return $('select[id=new_grp_type] > option:selected').val();
+  return $('select[id=new_grp_type] option:selected').val();
 },
 
 createGame: function() {
-	debugger;
      try {
         var gameType = this.getGameType();
         game = app.model.GameFactory.createGame(gameType);
         game.newGame();
-	debugger;
 	this.clearGame();
         this.setGameState(null);
 
         window.undoManager.clearUndo();
         app.controller.Storage.showGameStorage();
 
-        var game_type_name = $('select[id=new_grp_type] > option:selected').text();
+        var game_type_name = $('select[id=new_grp_type] option:selected').text();
         document.l10n.setAttributes(document.querySelector('#game_info_title'), "app.game_info.title", { "game_type": game_type_name } );
         document.l10n.formatValue("app.game_info.title", { "game_type": game_type_name } ).then(function(game_info_title) { 
             // Fix FireFox bug:
